@@ -1,0 +1,10 @@
+
+function S = Smatrix(E1,E2,G12, v12)
+S11 = 1/E1;
+S22 = 1/E2;
+S12 = -v12/E1;
+S66 = 1/G12;
+S = [S11 S12 0;
+    S12 S22 0;
+    0 0 S66];
+end

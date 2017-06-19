@@ -1,0 +1,142 @@
+clc
+clear all
+%Read Data
+data = xlsread('Project_2__data',1); %sheet 1 for problem 1, sheet 2 for problem 2
+%sort Data
+sizedata = size(data);
+N = sizedata(1);
+tp = data(:,6);
+E1 = data(:,2);
+E2 = data(:,3);
+G12 = data(:,4);
+nu12 = data(:,5);
+thetad = data(:,7)
+Forces = [data(1,8);data(2,8);data(3,8);data(4,8);data(5,8);data(6,8)]
+%laminate thickness
+tl = 0;
+N
+for i = 1:N
+tl = tl+tp(i);
+end
+tl
+Atotal = zeros(3);
+Btotal = zeros(3);
+Dtotal = zeros(3);
+%calculate A, B, D matrix for Each Ply, then add together
+for i = 1:N
+    %calculate constants for each ply
+    Sply = Smatrix(E1(i),E2(i),G12(i),nu12(i));
+    Qply = Qmatrix(Sply);
+    Qbarply = Qbar(Qply,thetad(i)*pi/180); %Qbar reads in radians
+    %establish locaction for each ply on zaxis
+   zkm1 = -tl*.5+tp(i)*(i-1);
+   zk = -tl*.5+tp(i)*i;
+   %calculate matrices
+   for r = 1:3
+       for c = 1:3
+           A(r,c) = Qbarply(r,c)*(zk-zkm1);
+           B(r,c) = Qbarply(r,c)*(zk^2-zkm1^2)
+           D(r,c) = Qbarply(r,c)*(zk^3-zkm1^3);
+       end
+   end
+   Atotal = Atotal+A;
+   Btotal = Btotal+(1/2)*B ;%for symmetrical laminate B should end up as zero
+   Dtotal = Dtotal + (1/3)*D;
+%Calculate matrix A
+    
+%Calculate Matrix B
+%Calculate Matrix D
+end
+Atotal
+Btotal
+Dtotal
+% calculate strains
+ABDmatrix = [Atotal(1,1) Atotal(1,2) Atotal(1,3) Btotal(1,1) Btotal(1,2) Btotal(1,3);
+             Atotal(2,1) Atotal(2,2) Atotal(2,3) Btotal(2,1) Btotal(2,2) Btotal(2,3);
+             Atotal(3,1) Atotal(3,2) Atotal(3,3) Btotal(3,1) Btotal(3,2) Btotal(3,3);
+             Btotal(1,1) Btotal(1,2) Btotal(1,3) Dtotal(1,1) Dtotal(1,2) Dtotal(1,3);
+             Btotal(2,1) Btotal(2,2) Btotal(2,3) Dtotal(2,1) Dtotal(2,2) Dtotal(2,3);
+             Btotal(3,1) Btotal(3,2) Btotal(3,3) Dtotal(3,1) Dtotal(3,2) Dtotal(3,3)]
+          strain0=(ABDmatrix)\Forces;
+% strain0 = ABDmatrix^-1*Forces
+for i = 1:N
+    z(i) = -tl*.5+tp(i)*(i-1);
+    z(i+1) = -tl*.5+tp(i)*(i);
+    zplot(2*(i-1)+1) = z(i);
+    zplot(2*(i-1)+1+1) = z(i);
+    zplot(2*(i-1)+3) = z(i+1);
+    zplot(2*(i-1)+4) = z(i+1);
+    
+end
+zplot(:,1) = [];
+zplot(:,2*N+1) = [];
+for i = 1:N+1
+        strainx(i) = strain0(1) + z(i)*strain0(4);
+        strainy(i) = strain0(2) +z(i)*strain0(5);
+        strainxy(i)= strain0(3)+z(i)*strain0(6) ;
+        
+end
+%prebuilding stressx matrix
+stressx=zeros(2*N,1);
+stressy=zeros(2*N,1);
+stressxy=zeros(2*N,1);
+stress1 =zeros(2*N,1);
+stress2 = zeros(2*N,1);
+stress12 = zeros(2*N,1);
+for i = 1:N
+      
+        Sply = Smatrix(E1(i),E2(i),G12(i),nu12(i));
+        Qply = Qmatrix(Sply);
+        Qbarply = Qbar(Qply,thetad(i)*pi/180);
+        T = Transform(thetad(i));
+        stressxyply = Qbarply*[strainx(i);strainy(i);strainxy(i)];
+        stressx(2*(i-1)+1)=stressxyply(1);
+        stressy(2*(i-1)+1) = stressxyply(2);
+        stressxy(2*(i-1)+1) = stressxyply(3);
+        strain12ply = T*[strainx(i);strainy(i);strainxy(i)];
+        strain1(2*(i-1)+1) = strain12ply(1);
+        strain2(2*(i-1)+1) = strain12ply(2);
+        strain12(2*(i-1)+1) = strain12ply(3);
+        stressxyply2 = Qbarply*[strainx(i+1);strainy(i+1);strainxy(i+1)];
+        stressx(2*(i-1)+2) = stressxyply2(1);
+        stressy(2*(i-1)+2) = stressxyply2(2);
+        stressxy(2*(i-1)+2) = stressxyply2(3);
+        strain12ply2 = T*[strainx(i+1);strainy(i+1);strainxy(i+1)];
+        strain1(2*(i-1)+2) = strain12ply2(1);
+        strain2(2*(i-1)+2) = strain12ply2(1);
+        strain12(2*(i-1)+2) = strain12ply2(1);
+        stress12ply = T*stressxyply;
+        stress12ply2 = T*stressxyply2;
+        stress1(2*(i-1)+1)=stress12ply(1);
+        stress2(2*(i-1)+1)=stress12ply(2);
+        stress12(2*(i-1)+1)=stress12ply(3);
+        stress1(2*(i-1)+2)=stress12ply2(1);
+        stress2(2*(i-1)+2)=stress12ply2(2);
+        stress12(2*(i-1)+2)=stress12ply2(3);
+end
+
+%plottin
+figure(1)
+plot(z,strainx,'-r',zplot,strain1,'-b')
+legend('strainx','strain1')
+ figure(2)
+ plot(zplot,stressx,'-r',zplot, stress1,'-b')
+ legend('stressx','stress1')
+
+% Qeq = (1/tl)*Atotal;
+
+
+% Seq = Qeq^-1
+% E1eq = 1/Seq(1,1)
+% E2eq = 1/Seq(2,2)
+% G12eq = 1/Seq(3,3)
+% 
+% v12eq = -Seq(1,2)*E1eq
+% G12check = E1eq/(2*(1+v12eq))
+%     
+% Qeqalt = (12/tl^3)*Dtotal;
+% Seqalt = Qeqalt^-1
+% E1eqalt = 1/Seqalt(1,1)
+% E2eqalt = 1/Seqalt(2,2)
+% G12eqalt= 1/Seqalt(3,3)
+% v12eqalt = -Seqalt(1,2)*E1eqalt

@@ -1,0 +1,66 @@
+clc
+clear all
+%Read Data
+data = xlsread('Project_1__data','A1:G8');
+%sort Data
+sizedata = size(data);
+N = sizedata(1);
+tp = data(:,6);
+E1 = data(:,2);
+E2 = data(:,3);
+G12 = data(:,4);
+nu12 = data(:,5);
+thetad = data(:,7)
+%laminate thickness
+tl = 0;
+N
+for i = 1:N
+tl = tl+tp(i);
+end
+tl
+Atotal = zeros(3);
+Btotal = zeros(3);
+Dtotal = zeros(3);
+%calculate A, B, D matrix for Each Ply, then add together
+for i = 1:N
+    %calculate constants for each ply
+    Sply = Smatrix(E1(i),E2(i),G12(i),nu12(i));
+    Qply = Qmatrix(Sply);
+    Qbarply = Qbar(Qply,thetad(i)*pi/180);
+    %establish locaction for each ply on zaxis
+   zkm1 = -tl*.5+tp(i)*(i-1);
+   zk = -tl*.5+tp(i)*i;
+   %calculate matrices
+   for r = 1:3
+       for c = 1:3
+           A(r,c) = Qbarply(r,c)*(zk-zkm1);
+           B(r,c) = Qbarply(r,c)*(zk^2-zkm1^2);
+           D(r,c) = Qbarply(r,c)*(zk^3-zkm1^3);
+       end
+   end
+   Atotal = Atotal+A;
+   Btotal = Btotal+(1/2)*B ;%for symmetrical laminate B should end up as zero
+   Dtotal = Dtotal + (1/3)*D;
+%Calculate matrix A
+    
+%Calculate Matrix B
+%Calculate Matrix D
+end
+Atotal
+Btotal
+Dtotal
+Qeq = (1/tl)*Atotal;
+Seq = Qeq^-1
+E1eq = 1/Seq(1,1)
+E2eq = 1/Seq(2,2)
+G12eq = 1/Seq(3,3)
+
+v12eq = -Seq(1,2)*E1eq
+G12check = E1eq/(2*(1+v12eq))
+
+Qeqalt = (12/tl^3)*Dtotal;
+Seqalt = Qeqalt^-1
+E1eqalt = 1/Seqalt(1,1)
+E2eqalt = 1/Seqalt(2,2)
+G12eqalt= 1/Seqalt(3,3)
+v12eqalt = -Seqalt(1,2)*E1eqalt
